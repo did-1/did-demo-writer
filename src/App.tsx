@@ -170,6 +170,31 @@ function App() {
       {renderGenerateKeys()}
       {renderDowloadKeys()}
       {renderValidateDomain()}
+      <div class="step hidden" id="step3">
+        <h2>Step 3: Write your social post and download generated html file</h2>
+        <p>This post will be signed with your private key</p>
+        <label for="post">Your post:</label>
+        <br />
+        <textarea id="post"></textarea>
+        <br />
+        <button>Download social post file</button>
+      </div>
+      <div class="step hidden" id="step4">
+        <h2>Step 4: Upload your social post file to a public URL</h2>
+        http://example.com/
+        <input id="url" placeholder="did/first-post" />
+        <button>Check URL</button>
+      </div>
+      <div class="step hidden" id="step5">
+        <h2>Step 5: Submit your post to DID node</h2>
+        Node: tautvilas.lt
+        <br />
+        <button>Submit</button>
+      </div>
+      <div class="step hidden" id="step6">
+        <h2>Step 6: See your social posts appear on a reader platform</h2>
+        <a href="#">Open link</a>
+      </div>
       <button
         onClick={() => {
           window.localStorage.clear()
