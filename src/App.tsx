@@ -12,8 +12,36 @@ const STORAGE_KEYS = {
   publicKey: 'publicKey'
 }
 
+const Api = () => {
+  const API_URL = 'http://localhost:3000'
+  const makeRequest = async (method = 'GET', endpoint = '/', params = {}) => {
+    let data = {}
+    try {
+      const reponse = await fetch(API_URL + endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      })
+      data = await reponse.json()
+    } catch (e) {
+      console.error(e)
+    }
+    return data
+  }
+  return {
+    validateKey: async (domain: string, publicKey: string) => {
+      return await makeRequest('POST', `/users/${domain}/validate`, {
+        publicKey
+      })
+    }
+  }
+}
+
 function App() {
   const [step, setStep] = useState(0)
+  const [username, setUsername] = useState('')
 
   const generateKeys = () => {
     const EC = elliptic.ec
@@ -47,20 +75,27 @@ function App() {
     }
   }
 
-  const downloadPublicKey = () => {
+  const getPublicKeyPem = () => {
     window.Buffer = buffer.Buffer
     const rawPublicKey = localStorage.getItem(STORAGE_KEYS.publicKey)
     if (rawPublicKey) {
       const keyEncoder = new KeyEncoder('secp256k1')
       const pemPublicKey = keyEncoder.encodePublic(rawPublicKey, 'raw', 'pem')
-      const blob = new Blob([pemPublicKey])
-      const a = window.document.createElement('a')
-      a.href = window.URL.createObjectURL(blob)
-      a.download = `did.pem`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      return pemPublicKey
+    } else {
+      throw 'Public key missing'
     }
+  }
+
+  const downloadPublicKey = () => {
+    const pemPublicKey = getPublicKeyPem()
+    const blob = new Blob([pemPublicKey])
+    const a = window.document.createElement('a')
+    a.href = window.URL.createObjectURL(blob)
+    a.download = `did.pem`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   const generateSignature = () => {
@@ -80,7 +115,7 @@ function App() {
     }
     return (
       <div>
-        Step 1: Generate private and public keys:
+        <h3>✅ Step 1: Generate private and public keys:</h3>
         <button onClick={downloadPrivateKey}>Download private key</button>
         <button onClick={downloadPublicKey}>Download public key</button>
       </div>
@@ -93,8 +128,35 @@ function App() {
     }
     return (
       <div>
-        Step 1: Generate private and public keys:
+        <h2>Step 1: Generate private and public keys:</h2>
         <button onClick={generateKeys}>Generate keys</button>
+      </div>
+    )
+  }
+
+  const validateDomain = async () => {
+    const response = await Api().validateKey(username, getPublicKeyPem())
+    console.log(response)
+  }
+
+  const renderValidateDomain = () => {
+    if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
+      return null
+    }
+    return (
+      <div>
+        <h3>
+          Step 2: Prove domain ownership by uploading public key to a domain
+          that you own
+        </h3>
+        http://
+        <input
+          placeholder="example.com"
+          onChange={(e) => setUsername(e.target.value)}
+          value={username}
+        />
+        /did.pem
+        <button onClick={validateDomain}>Validate</button>
       </div>
     )
   }
@@ -107,6 +169,7 @@ function App() {
       </h1>
       {renderGenerateKeys()}
       {renderDowloadKeys()}
+      {renderValidateDomain()}
       <button
         onClick={() => {
           window.localStorage.clear()
