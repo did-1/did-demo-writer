@@ -1,39 +1,66 @@
-// import { useState } from 'react'
+import { useState } from 'react'
 import elliptic from 'elliptic'
 import KeyEncoder from 'key-encoder'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+// import reactLogo from './assets/react.svg'
+// import viteLogo from '/vite.svg'
 import './App.css'
 import buffer from 'buffer'
 import jsSha from 'js-sha256'
 
+const STORAGE_KEYS = {
+  privateKey: 'privateKey',
+  publicKey: 'publicKey'
+}
+
 function App() {
-  // const [count, setCount] = useState(0)
+  const [step, setStep] = useState(0)
 
-  const generateKey = () => {
+  const generateKeys = () => {
     const EC = elliptic.ec
-
-    // Create and initialize EC context
-    // (better do it once and reuse it)
     var ec = new EC('secp256k1')
-
-    // // Generate keys
-    window.Buffer = buffer.Buffer
     var keys = ec.genKeyPair()
     const rawPrivateKey = keys.getPrivate('hex')
     const rawPublicKey = keys.getPublic('hex')
-    const keyEncoder = new KeyEncoder('secp256k1')
-    const pemPrivateKey = keyEncoder.encodePrivate(
-      rawPrivateKey,
-      'raw',
-      'pem',
-      'pkcs8'
-    )
-    window.localStorage.setItem('publicKey', rawPublicKey)
-    window.localStorage.setItem('privateKey', rawPrivateKey)
-    const pemPublicKey = keyEncoder.encodePublic(rawPublicKey, 'raw', 'pem')
-    console.log(pemPrivateKey)
-    console.log(pemPublicKey)
+    window.localStorage.setItem(STORAGE_KEYS.publicKey, rawPublicKey)
+    window.localStorage.setItem(STORAGE_KEYS.privateKey, rawPrivateKey)
+    setStep(1)
+  }
+
+  const downloadPrivateKey = () => {
+    window.Buffer = buffer.Buffer
+    const rawPrivateKey = localStorage.getItem(STORAGE_KEYS.privateKey)
+    if (rawPrivateKey) {
+      const keyEncoder = new KeyEncoder('secp256k1')
+      const pemPrivateKey = keyEncoder.encodePrivate(
+        rawPrivateKey!,
+        'raw',
+        'pem',
+        'pkcs8'
+      )
+      const blob = new Blob([pemPrivateKey])
+      const a = window.document.createElement('a')
+      a.href = window.URL.createObjectURL(blob)
+      a.download = `did-private.pem`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+  }
+
+  const downloadPublicKey = () => {
+    window.Buffer = buffer.Buffer
+    const rawPublicKey = localStorage.getItem(STORAGE_KEYS.publicKey)
+    if (rawPublicKey) {
+      const keyEncoder = new KeyEncoder('secp256k1')
+      const pemPublicKey = keyEncoder.encodePublic(rawPublicKey, 'raw', 'pem')
+      const blob = new Blob([pemPublicKey])
+      const a = window.document.createElement('a')
+      a.href = window.URL.createObjectURL(blob)
+      a.download = `did.pem`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
   }
 
   const generateSignature = () => {
@@ -47,27 +74,47 @@ function App() {
     console.log(signature.toDER())
   }
 
+  const renderDowloadKeys = () => {
+    if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
+      return null
+    }
+    return (
+      <div>
+        Step 1: Generate private and public keys:
+        <button onClick={downloadPrivateKey}>Download private key</button>
+        <button onClick={downloadPublicKey}>Download public key</button>
+      </div>
+    )
+  }
+
+  const renderGenerateKeys = () => {
+    if (localStorage.getItem(STORAGE_KEYS.privateKey)) {
+      return null
+    }
+    return (
+      <div>
+        Step 1: Generate private and public keys:
+        <button onClick={generateKeys}>Generate keys</button>
+      </div>
+    )
+  }
+
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={generateKey}>Geerate key</button>
-        <button onClick={generateSignature}>Sign message</button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <h1>
+        Submit your first social post to DID (Decentralized Information
+        Distributor)
+      </h1>
+      {renderGenerateKeys()}
+      {renderDowloadKeys()}
+      <button
+        onClick={() => {
+          window.localStorage.clear()
+          setStep(0)
+        }}
+      >
+        Reset {step}
+      </button>
     </>
   )
 }
