@@ -53,6 +53,14 @@ function escapeHTML(str: string) {
   return content.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
+function createSlug(str) {
+  return str
+    .toLowerCase() // convert to lowercase
+    .replace(/\s+/g, '-') // replace spaces with hyphens
+    .replace(/[^a-z0-9-]/g, '') // remove invalid chars
+    .replace(/--+/g, '-') // remove duplicate hyphens
+}
+
 function App() {
   const [username, setUsername] = useState('')
   const [content, setContent] = useState(
@@ -194,6 +202,11 @@ function App() {
     const rows = escapedContent.map((c) => {
       return `    <meta name="did:content" content="${c}">`
     })
+    // TODO attach image
+    // <meta name="did:media" content="${url}">`
+    // <meta name="did:media:hash" content="${imageHash}">`
+    // <meta name="did:link" content="${url}">`
+    // <meta name="did:link:hash" content="${pageHash}">` (could be DID page or regular link)
     const blob = new Blob([
       `<!DOCTYPE html>
 <html lang="en">
@@ -202,7 +215,7 @@ function App() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 ${rows.join('\n')}
     <link rel="stylesheet" href="style.css">
-    <title>${escapedContent[0]}</title>
+    <title>${escapedContent[0].substring(0, 256)}</title>
   </head>
   <body>
     <div id="content">
