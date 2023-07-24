@@ -9,12 +9,17 @@ import jsSha from 'js-sha256'
 
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
-  publicKey: 'publicKey'
+  publicKey: 'publicKey',
+  username: 'personalDomain'
 }
 
 const Api = () => {
   const API_URL = 'http://localhost:3000'
-  const makeRequest = async (method = 'GET', endpoint = '/', params = {}) => {
+  const makeRequest = async (
+    method = 'GET',
+    endpoint = '/',
+    params = {}
+  ): Promise<any> => {
     let data = {}
     try {
       const reponse = await fetch(API_URL + endpoint, {
@@ -42,6 +47,7 @@ const Api = () => {
 function App() {
   const [step, setStep] = useState(0)
   const [username, setUsername] = useState('')
+  const [content, setContent] = useState('')
 
   const generateKeys = () => {
     const EC = elliptic.ec
@@ -135,7 +141,13 @@ function App() {
   }
 
   const validateDomain = async () => {
+    // TODO: display loading state
     const response = await Api().validateKey(username, getPublicKeyPem())
+    if (response?.valid) {
+      //TODO: display error message
+      localStorage.setItem(STORAGE_KEYS.username, username)
+    }
+    // TODO: set state loading: false to update state
     console.log(response)
   }
 
@@ -143,20 +155,72 @@ function App() {
     if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
       return null
     }
+    const storedUsername = localStorage.getItem(STORAGE_KEYS.username)
     return (
       <div>
         <h3>
+          {storedUsername ? '✅ ' : null}
           Step 2: Prove domain ownership by uploading public key to a domain
           that you own
         </h3>
         http://
         <input
+          disabled={!!storedUsername}
           placeholder="example.com"
           onChange={(e) => setUsername(e.target.value)}
-          value={username}
+          value={username || storedUsername || ''}
         />
         /did.pem
-        <button onClick={validateDomain}>Validate</button>
+        {storedUsername ? null : (
+          <button onClick={validateDomain}>Validate</button>
+        )}
+      </div>
+    )
+  }
+
+  const downloadSocialPost = () => {
+    const blob = new Blob([
+      `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Submit a post to DID</title>
+        </head>
+        <body>
+          <div id="root">
+            ${content}
+          </div>
+        </body>
+      </html>
+      `
+    ])
+    const a = window.document.createElement('a')
+    a.href = window.URL.createObjectURL(blob)
+    a.download = `index.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const renderDownloadPost = () => {
+    if (!localStorage.getItem(STORAGE_KEYS.username)) {
+      return null
+    }
+    return (
+      <div>
+        <h3>
+          Step 3: Write your post and download generated html file [syntax]
+        </h3>
+        <label htmlFor="post">Your post:</label>
+        <br />
+        <textarea
+          id="post"
+          onChange={(e) => setContent(e.target.value)}
+        ></textarea>
+        <br />
+        <button onClick={downloadSocialPost}>Download social post file</button>
       </div>
     )
   }
@@ -170,29 +234,21 @@ function App() {
       {renderGenerateKeys()}
       {renderDowloadKeys()}
       {renderValidateDomain()}
-      <div class="step hidden" id="step3">
-        <h2>Step 3: Write your social post and download generated html file</h2>
-        <p>This post will be signed with your private key</p>
-        <label for="post">Your post:</label>
-        <br />
-        <textarea id="post"></textarea>
-        <br />
-        <button>Download social post file</button>
-      </div>
-      <div class="step hidden" id="step4">
-        <h2>Step 4: Upload your social post file to a public URL</h2>
+      {renderDownloadPost()}
+      {/* <div class="step hidden" id="step4">
+        <h2>Step 4: Upload your social post to your validated domain</h2>
         http://example.com/
         <input id="url" placeholder="did/first-post" />
         <button>Check URL</button>
       </div>
       <div class="step hidden" id="step5">
-        <h2>Step 5: Submit your post to DID node</h2>
+        <h2>Step 5: Submit your signed post to DID node</h2>
         Node: tautvilas.lt
         <br />
         <button>Submit</button>
       </div>
       <div class="step hidden" id="step6">
-        <h2>Step 6: See your social posts appear on a reader platform</h2>
+        <h2>Step 6: See your post appear on a social reader platform</h2>
         <a href="#">Open link</a>
       </div>
       <button
@@ -202,7 +258,7 @@ function App() {
         }}
       >
         Reset {step}
-      </button>
+      </button> */}
     </>
   )
 }
