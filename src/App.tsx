@@ -10,7 +10,8 @@ import jsSha from 'js-sha256'
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
   publicKey: 'publicKey',
-  username: 'personalDomain'
+  username: 'personalDomain',
+  content: 'content'
 }
 
 const Api = () => {
@@ -44,10 +45,19 @@ const Api = () => {
   }
 }
 
+function escapeHTML(str: string) {
+  let div = document.createElement('div')
+  div.appendChild(document.createTextNode(str))
+  const content = div.innerHTML
+  // document.body.removeChild(div)
+  return content.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 function App() {
-  const [step, setStep] = useState(0)
   const [username, setUsername] = useState('')
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(
+    localStorage.getItem(STORAGE_KEYS.content) || ''
+  )
 
   const generateKeys = () => {
     const EC = elliptic.ec
@@ -57,7 +67,6 @@ function App() {
     const rawPublicKey = keys.getPublic('hex')
     window.localStorage.setItem(STORAGE_KEYS.publicKey, rawPublicKey)
     window.localStorage.setItem(STORAGE_KEYS.privateKey, rawPrivateKey)
-    setStep(1)
   }
 
   const downloadPrivateKey = () => {
@@ -179,22 +188,30 @@ function App() {
   }
 
   const downloadSocialPost = () => {
+    const escapedContent = escapeHTML(content)
+      .split('\n')
+      .filter((p) => p)
+    const rows = escapedContent.map((c) => {
+      return `    <meta name="did:content" content="${c}">`
+    })
     const blob = new Blob([
-      `
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Submit a post to DID</title>
-        </head>
-        <body>
-          <div id="root">
-            ${content}
-          </div>
-        </body>
-      </html>
-      `
+      `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+${rows.join('\n')}
+    <link rel="stylesheet" href="style.css">
+    <title>${escapedContent[0]}</title>
+  </head>
+  <body>
+    <div id="content">
+      ${escapedContent.join('<br>\n      ')}
+    </div>
+  </body>
+</html>
+
+`
     ])
     const a = window.document.createElement('a')
     a.href = window.URL.createObjectURL(blob)
@@ -217,10 +234,18 @@ function App() {
         <br />
         <textarea
           id="post"
-          onChange={(e) => setContent(e.target.value)}
+          defaultValue={content}
+          onChange={(e) => {
+            setContent(e.target.value)
+            localStorage.setItem(STORAGE_KEYS.content, e.target.value)
+          }}
         ></textarea>
         <br />
-        <button onClick={downloadSocialPost}>Download social post file</button>
+        {content.length > 10 ? (
+          <button onClick={downloadSocialPost}>
+            Download social post file
+          </button>
+        ) : null}
       </div>
     )
   }
