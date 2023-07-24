@@ -5,14 +5,15 @@ import KeyEncoder from 'key-encoder'
 // import viteLogo from '/vite.svg'
 import './App.css'
 import buffer from 'buffer'
-import jsSha from 'js-sha256'
+// import jsSha from 'js-sha256'
 
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
   publicKey: 'publicKey',
   username: 'personalDomain',
   content: 'content',
-  downloadedContent: 'downloadedContent'
+  downloadedContent: 'downloadedContent',
+  path: 'path'
 }
 
 const Api = () => {
@@ -42,6 +43,11 @@ const Api = () => {
       return await makeRequest('POST', `/users/${domain}/validate`, {
         publicKey
       })
+    },
+    validatePath: async (domain: string, path: string) => {
+      return await makeRequest('POST', `/users/${domain}/path/validate`, {
+        path
+      })
     }
   }
 }
@@ -54,8 +60,10 @@ function escapeHTML(str: string) {
   return content.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function createSlug(str) {
+function createSlug(str: string) {
   return str
+    .split('\n')[0]
+    .substring(0, 64)
     .toLowerCase() // convert to lowercase
     .replace(/\s+/g, '-') // replace spaces with hyphens
     .replace(/[^a-z0-9-]/g, '') // remove invalid chars
@@ -63,9 +71,14 @@ function createSlug(str) {
 }
 
 function App() {
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(
+    localStorage.getItem(STORAGE_KEYS.username) || ''
+  )
   const [content, setContent] = useState(
     localStorage.getItem(STORAGE_KEYS.content) || ''
+  )
+  const [path, setPath] = useState(
+    localStorage.getItem(STORAGE_KEYS.path) || ''
   )
   const [downloadedContent, setDownloadedContent] = useState(
     localStorage.getItem(STORAGE_KEYS.downloadedContent) || ''
@@ -125,16 +138,16 @@ function App() {
     document.body.removeChild(a)
   }
 
-  const generateSignature = () => {
-    const hash = jsSha.sha256('Hello world!')
-    console.log(hash)
-    const EC = elliptic.ec
-    const ec = new EC('secp256k1')
-    const key = ec.keyFromPrivate(localStorage.getItem('privateKey')!, 'hex')
-    const signature = key.sign(hash)
-    console.log(signature)
-    console.log(signature.toDER())
-  }
+  // const generateSignature = () => {
+  //   const hash = jsSha.sha256('Hello world!')
+  //   console.log(hash)
+  //   const EC = elliptic.ec
+  //   const ec = new EC('secp256k1')
+  //   const key = ec.keyFromPrivate(localStorage.getItem('privateKey')!, 'hex')
+  //   const signature = key.sign(hash)
+  //   console.log(signature)
+  //   console.log(signature.toDER())
+  // }
 
   const renderDowloadKeys = () => {
     if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
@@ -159,6 +172,19 @@ function App() {
         <button onClick={generateKeys}>Generate keys</button>
       </div>
     )
+  }
+
+  const validatePath = async () => {
+    if (!path || !username) {
+      return
+    }
+    const response = await Api().validatePath(username, path)
+    if (response?.valid) {
+      //TODO: display error message
+      localStorage.setItem(STORAGE_KEYS.path, path)
+    }
+    // TODO: set state loading: false to update state
+    console.log(response)
   }
 
   const validateDomain = async () => {
@@ -188,7 +214,7 @@ function App() {
         <input
           disabled={!!storedUsername}
           placeholder="example.com"
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value.trim())}
           value={username || storedUsername || ''}
         />
         /did.pem
@@ -200,7 +226,8 @@ function App() {
   }
 
   const downloadSocialPost = () => {
-    const escapedContent = escapeHTML(content)
+    const trimmedContent = content.trim()
+    const escapedContent = escapeHTML(trimmedContent)
       .split('\n')
       .filter((p) => p)
     const rows = escapedContent.map((c) => {
@@ -235,8 +262,51 @@ ${rows.join('\n')}
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    localStorage.setItem(STORAGE_KEYS.downloadedContent, content)
-    setDownloadedContent(content)
+    localStorage.setItem(STORAGE_KEYS.downloadedContent, trimmedContent)
+    setDownloadedContent(trimmedContent)
+  }
+
+  const renderValidatePost = () => {
+    const storedPath = localStorage.getItem(STORAGE_KEYS.path)
+    if (!downloadedContent) {
+      return null
+    }
+    const suggestedSlug = createSlug(downloadedContent)
+    return (
+      <div>
+        <h2>
+          {storedPath ? '✅ ' : null} Step 4: Upload your social post to your
+          validated domain
+        </h2>
+        <p>
+          Create a folder on your folder and upload downloaded index.html to it.
+          A good name for such folder could be <i>{suggestedSlug}</i>
+        </p>
+        http://{username}/
+        <input
+          id="url"
+          disabled={storedPath ? true : false}
+          placeholder={suggestedSlug}
+          defaultValue={storedPath || ''}
+          onChange={(e) => setPath(e.target.value.trim())}
+        />
+        {storedPath ? null : <button onClick={validatePath}>Check URL</button>}
+      </div>
+    )
+  }
+
+  const renderSumbitPost = () => {
+    if (!localStorage.getItem(STORAGE_KEYS.path)) {
+      return null
+    }
+    return (
+      <div>
+        <h3>Step 5: Submit your signed post to DID node</h3>
+        Node: tautvilas.lt
+        <br />
+        <button>Submit</button>
+      </div>
+    )
   }
 
   const renderDownloadPost = () => {
@@ -255,8 +325,8 @@ ${rows.join('\n')}
           id="post"
           defaultValue={content}
           onChange={(e) => {
-            setContent(e.target.value)
-            localStorage.setItem(STORAGE_KEYS.content, e.target.value)
+            setContent(e.target.value.trim())
+            localStorage.setItem(STORAGE_KEYS.content, e.target.value.trim())
           }}
         ></textarea>
         <br />
@@ -279,18 +349,9 @@ ${rows.join('\n')}
       {renderDowloadKeys()}
       {renderValidateDomain()}
       {renderDownloadPost()}
-      {/* <div class="step hidden" id="step4">
-        <h2>Step 4: Upload your social post to your validated domain</h2>
-        http://example.com/
-        <input id="url" placeholder="did/first-post" />
-        <button>Check URL</button>
-      </div>
-      <div class="step hidden" id="step5">
-        <h2>Step 5: Submit your signed post to DID node</h2>
-        Node: tautvilas.lt
-        <br />
-        <button>Submit</button>
-      </div>
+      {renderValidatePost()}
+      {renderSumbitPost()}
+      {/*
       <div class="step hidden" id="step6">
         <h2>Step 6: See your post appear on a social reader platform</h2>
         <a href="#">Open link</a>
