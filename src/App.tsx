@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
   privateKey: 'privateKey',
   publicKey: 'publicKey',
   username: 'personalDomain',
-  content: 'content'
+  content: 'content',
+  downloadedContent: 'downloadedContent'
 }
 
 const Api = () => {
@@ -65,6 +66,9 @@ function App() {
   const [username, setUsername] = useState('')
   const [content, setContent] = useState(
     localStorage.getItem(STORAGE_KEYS.content) || ''
+  )
+  const [downloadedContent, setDownloadedContent] = useState(
+    localStorage.getItem(STORAGE_KEYS.downloadedContent) || ''
   )
 
   const generateKeys = () => {
@@ -207,8 +211,7 @@ function App() {
     // <meta name="did:media:hash" content="${imageHash}">`
     // <meta name="did:link" content="${url}">`
     // <meta name="did:link:hash" content="${pageHash}">` (could be DID page or regular link)
-    const blob = new Blob([
-      `<!DOCTYPE html>
+    const data = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
@@ -225,13 +228,15 @@ ${rows.join('\n')}
 </html>
 
 `
-    ])
+    const blob = new Blob([data])
     const a = window.document.createElement('a')
     a.href = window.URL.createObjectURL(blob)
     a.download = `index.html`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+    localStorage.setItem(STORAGE_KEYS.downloadedContent, content)
+    setDownloadedContent(content)
   }
 
   const renderDownloadPost = () => {
@@ -241,7 +246,8 @@ ${rows.join('\n')}
     return (
       <div>
         <h3>
-          Step 3: Write your post and download generated html file [syntax]
+          {downloadedContent ? '✅ ' : null}Step 3: Write your post and download
+          generated html file
         </h3>
         <label htmlFor="post">Your post:</label>
         <br />
