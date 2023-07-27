@@ -5,7 +5,7 @@ import KeyEncoder from 'key-encoder'
 // import viteLogo from '/vite.svg'
 import './App.css'
 import buffer from 'buffer'
-// import jsSha from 'js-sha256'
+import jsSha from 'js-sha256'
 
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   username: 'personalDomain',
   content: 'content',
   downloadedContent: 'downloadedContent',
+  postData: 'postData',
   path: 'path'
 }
 
@@ -48,6 +49,9 @@ const Api = () => {
       return await makeRequest('POST', `/users/${domain}/path/validate`, {
         path
       })
+    },
+    submitPost: async (domain: string, params: any) => {
+      return await makeRequest('POST', `/users/${domain}/post`, params)
     }
   }
 }
@@ -138,16 +142,33 @@ function App() {
     document.body.removeChild(a)
   }
 
-  // const generateSignature = () => {
-  //   const hash = jsSha.sha256('Hello world!')
-  //   console.log(hash)
-  //   const EC = elliptic.ec
-  //   const ec = new EC('secp256k1')
-  //   const key = ec.keyFromPrivate(localStorage.getItem('privateKey')!, 'hex')
-  //   const signature = key.sign(hash)
-  //   console.log(signature)
-  //   console.log(signature.toDER())
-  // }
+  const submitPost = async () => {
+    const data = localStorage.getItem(STORAGE_KEYS.postData)
+    if (!data) {
+      return
+    }
+    const hash = jsSha.sha256(data)
+    const EC = elliptic.ec
+    const ec = new EC('secp256k1')
+    const key = ec.keyFromPrivate(
+      localStorage.getItem(STORAGE_KEYS.privateKey)!,
+      'hex'
+    )
+    const blockId = ''
+    const url = username + '/' + path
+    const signature = key.sign([url, hash, blockId].join(';'))
+    const resp = await Api().submitPost(username, {
+      url,
+      blockId,
+      // todo add blockchain ID
+      hash,
+      signature: signature.toDER()
+    })
+    console.log(resp)
+    // console.log(hash)
+    // // console.log(signature)
+    // console.log(signature.toDER())
+  }
 
   const renderDowloadKeys = () => {
     if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
@@ -238,6 +259,8 @@ function App() {
     // <meta name="did:media:hash" content="${imageHash}">`
     // <meta name="did:link" content="${url}">`
     // <meta name="did:link:hash" content="${pageHash}">` (could be DID page or regular link)
+    // <meta name="did:location:lat" content="coords">`
+    // <meta name="did:location:lng" content="coords">`
     const data = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -263,6 +286,7 @@ ${rows.join('\n')}
     a.click()
     document.body.removeChild(a)
     localStorage.setItem(STORAGE_KEYS.downloadedContent, trimmedContent)
+    localStorage.setItem(STORAGE_KEYS.postData, data)
     setDownloadedContent(trimmedContent)
   }
 
@@ -274,10 +298,10 @@ ${rows.join('\n')}
     const suggestedSlug = createSlug(downloadedContent)
     return (
       <div>
-        <h2>
+        <h3>
           {storedPath ? '✅ ' : null} Step 4: Upload your social post to your
           validated domain
-        </h2>
+        </h3>
         <p>
           Create a folder on your folder and upload downloaded index.html to it.
           A good name for such folder could be <i>{suggestedSlug}</i>
@@ -304,7 +328,7 @@ ${rows.join('\n')}
         <h3>Step 5: Submit your signed post to DID node</h3>
         Node: tautvilas.lt
         <br />
-        <button>Submit</button>
+        <button onClick={submitPost}>Submit</button>
       </div>
     )
   }
