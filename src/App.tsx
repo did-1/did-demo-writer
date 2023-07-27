@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import elliptic from 'elliptic'
 import KeyEncoder from 'key-encoder'
 // import reactLogo from './assets/react.svg'
@@ -80,6 +80,13 @@ function createSlug(str: string) {
 }
 
 function App() {
+  const domainInput = useRef(null)
+  const [privateKey, setPrivateKey] = useState(
+    localStorage.getItem(STORAGE_KEYS.privateKey) || ''
+  )
+  const [publicKey, setPublicKey] = useState(
+    localStorage.getItem(STORAGE_KEYS.publicKey) || ''
+  )
   const [username, setUsername] = useState(
     localStorage.getItem(STORAGE_KEYS.username) || ''
   )
@@ -103,6 +110,8 @@ function App() {
     const rawPublicKey = keys.getPublic('hex')
     window.localStorage.setItem(STORAGE_KEYS.publicKey, rawPublicKey)
     window.localStorage.setItem(STORAGE_KEYS.privateKey, rawPrivateKey)
+    setPublicKey(rawPublicKey)
+    setPrivateKey(rawPrivateKey)
   }
 
   const downloadPrivateKey = () => {
@@ -169,13 +178,14 @@ function App() {
     console.log(block.hash)
     const blockHash = block.hash
     const message = [blockHash, username, path, hash].join('/')
-    const signature = key.sign([blockHash, username, path, hash].join('/'))
+    const signature = key.sign(
+      jsSha.sha256([blockHash, username, path, hash].join('/'))
+    )
     console.log(message)
     const resp = await Api().submitPost('tautvilas.lt', {
       domain: username,
       path,
       blockHash,
-      // todo add blockchain ID
       hash,
       signature: signature.toDER()
     })
@@ -190,7 +200,7 @@ function App() {
   }
 
   const renderDowloadKeys = () => {
-    if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
+    if (!privateKey) {
       return null
     }
     return (
@@ -203,7 +213,7 @@ function App() {
   }
 
   const renderGenerateKeys = () => {
-    if (localStorage.getItem(STORAGE_KEYS.privateKey)) {
+    if (privateKey) {
       return null
     }
     return (
@@ -227,39 +237,45 @@ function App() {
     console.log(response)
   }
 
-  const validateDomain = async () => {
+  const validateDomain = async (domainName: string) => {
     // TODO: display loading state
-    const response = await Api().validateKey(username, getPublicKeyPem())
+    const response = await Api().validateKey(domainName, getPublicKeyPem())
     if (response?.valid) {
       //TODO: display error message
-      localStorage.setItem(STORAGE_KEYS.username, username)
+      localStorage.setItem(STORAGE_KEYS.username, domainName)
+      setUsername(domainName)
     }
     // TODO: set state loading: false to update state
     console.log(response)
   }
 
   const renderValidateDomain = () => {
-    if (!localStorage.getItem(STORAGE_KEYS.privateKey)) {
+    if (!privateKey) {
       return null
     }
-    const storedUsername = localStorage.getItem(STORAGE_KEYS.username)
     return (
       <div>
         <h3>
-          {storedUsername ? '✅ ' : null}
+          {username ? '✅ ' : null}
           Step 2: Prove domain ownership by uploading public key to a domain
           that you own
         </h3>
         http://
         <input
-          disabled={!!storedUsername}
+          ref={domainInput}
+          disabled={!!username}
           placeholder="example.com"
-          onChange={(e) => setUsername(e.target.value.trim())}
-          value={username || storedUsername || ''}
+          defaultValue={username}
         />
         /did.pem
-        {storedUsername ? null : (
-          <button onClick={validateDomain}>Validate</button>
+        {username ? null : (
+          <button
+            onClick={() => {
+              validateDomain((domainInput.current! as any).value)
+            }}
+          >
+            Validate
+          </button>
         )}
       </div>
     )
