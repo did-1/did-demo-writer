@@ -92,6 +92,8 @@ function App() {
   const [downloadedContent, setDownloadedContent] = useState(
     localStorage.getItem(STORAGE_KEYS.downloadedContent) || ''
   )
+  const [submitLoading, setSubmitLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const generateKeys = () => {
     const EC = elliptic.ec
@@ -148,8 +150,12 @@ function App() {
   }
 
   const submitPost = async () => {
+    setSubmitError('')
+    setSubmitLoading(true)
     const data = localStorage.getItem(STORAGE_KEYS.postData)
     if (!data) {
+      setSubmitError('Post not valid')
+      setSubmitLoading(false)
       return
     }
     const hash = jsSha.sha256(data)
@@ -162,7 +168,9 @@ function App() {
     const block = await Api().getLastBlock()
     console.log(block.hash)
     const blockHash = block.hash
+    const message = [blockHash, username, path, hash].join('/')
     const signature = key.sign([blockHash, username, path, hash].join('/'))
+    console.log(message)
     const resp = await Api().submitPost('tautvilas.lt', {
       domain: username,
       path,
@@ -171,6 +179,10 @@ function App() {
       hash,
       signature: signature.toDER()
     })
+    if (resp.error) {
+      setSubmitError(resp.error)
+    }
+    setSubmitLoading(false)
     console.log(resp)
     // console.log(hash)
     // // console.log(signature)
@@ -336,6 +348,8 @@ ${rows.join('\n')}
         Node: {API_URL}
         <br />
         <button onClick={submitPost}>Submit</button>
+        {submitLoading ? 'Loading...' : ''}
+        {submitError}
       </div>
     )
   }
