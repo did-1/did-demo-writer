@@ -17,22 +17,24 @@ const STORAGE_KEYS = {
   path: 'path'
 }
 
+const API_URL = 'http://localhost:3000'
+
 const Api = () => {
-  const API_URL = 'http://localhost:3000'
   const makeRequest = async (
     method = 'GET',
     endpoint = '/',
-    params = {}
+    params?: any
   ): Promise<any> => {
     let data = {}
+    const settings = {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: params ? JSON.stringify(params) : null
+    }
     try {
-      const reponse = await fetch(API_URL + endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(params)
-      })
+      const reponse = await fetch(API_URL + endpoint, settings)
       data = await reponse.json()
     } catch (e) {
       console.error(e)
@@ -52,6 +54,9 @@ const Api = () => {
     },
     submitPost: async (domain: string, params: any) => {
       return await makeRequest('POST', `/users/${domain}/post`, params)
+    },
+    getLastBlock: async () => {
+      return await makeRequest('GET', `/block/latest`)
     }
   }
 }
@@ -154,12 +159,14 @@ function App() {
       localStorage.getItem(STORAGE_KEYS.privateKey)!,
       'hex'
     )
-    const blockId = ''
-    const url = username + '/' + path
-    const signature = key.sign([url, hash, blockId].join(';'))
-    const resp = await Api().submitPost(username, {
-      url,
-      blockId,
+    const block = await Api().getLastBlock()
+    console.log(block.hash)
+    const blockHash = block.hash
+    const signature = key.sign([blockHash, username, path, hash].join('/'))
+    const resp = await Api().submitPost('tautvilas.lt', {
+      domain: username,
+      path,
+      blockHash,
       // todo add blockchain ID
       hash,
       signature: signature.toDER()
@@ -326,7 +333,7 @@ ${rows.join('\n')}
     return (
       <div>
         <h3>Step 5: Submit your signed post to DID node</h3>
-        Node: tautvilas.lt
+        Node: {API_URL}
         <br />
         <button onClick={submitPost}>Submit</button>
       </div>
