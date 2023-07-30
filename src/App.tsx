@@ -6,6 +6,7 @@ import KeyEncoder from 'key-encoder'
 import './App.css'
 import buffer from 'buffer'
 import jsSha from 'js-sha256'
+import { Flipper, Flipped } from 'react-flip-toolkit'
 
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
@@ -101,6 +102,18 @@ function App() {
   )
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  const reset = () => {
+    window.localStorage.clear()
+    setPrivateKey('')
+    setPublicKey('')
+    setUsername('')
+    setContent('')
+    setPath('')
+    setDownloadedContent('')
+    setSubmitError('')
+    setSubmitLoading(false)
+  }
 
   const generateKeys = () => {
     const EC = elliptic.ec
@@ -199,27 +212,22 @@ function App() {
     // console.log(signature.toDER())
   }
 
-  const renderDowloadKeys = () => {
-    if (!privateKey) {
-      return null
-    }
-    return (
-      <div>
-        <h3>✅ Step 1: Generate private and public keys:</h3>
-        <button onClick={downloadPrivateKey}>Download private key</button>
-        <button onClick={downloadPublicKey}>Download public key</button>
-      </div>
-    )
-  }
-
   const renderGenerateKeys = () => {
+    let buttons = <button onClick={generateKeys}>Generate keys</button>
     if (privateKey) {
-      return null
+      buttons = (
+        <>
+          <button onClick={downloadPrivateKey}>Download private key</button>
+          <button onClick={downloadPublicKey}>Download public key</button>
+        </>
+      )
     }
     return (
-      <div>
-        <h2>Step 1: Generate private and public keys:</h2>
-        <button onClick={generateKeys}>Generate keys</button>
+      <div className="step">
+        <h3>
+          {privateKey ? '✅ ' : ''} Step 1: Generate private and public keys:
+        </h3>
+        {buttons}
       </div>
     )
   }
@@ -254,7 +262,7 @@ function App() {
       return null
     }
     return (
-      <div>
+      <div className="step">
         <h3>
           {username ? '✅ ' : null}
           Step 2: Prove domain ownership by uploading public key to a domain
@@ -332,7 +340,7 @@ ${rows.join('\n')}
     }
     const suggestedSlug = createSlug(downloadedContent)
     return (
-      <div>
+      <div className="step">
         <h3>
           {storedPath ? '✅ ' : null} Step 4: Upload your social post to your
           validated domain
@@ -359,7 +367,7 @@ ${rows.join('\n')}
       return null
     }
     return (
-      <div>
+      <div className="step">
         <h3>Step 5: Submit your signed post to DID node</h3>
         Node: {API_URL}
         <br />
@@ -375,7 +383,7 @@ ${rows.join('\n')}
       return null
     }
     return (
-      <div>
+      <div className="step">
         <h3>
           {downloadedContent ? '✅ ' : null}Step 3: Write your post and download
           generated html file
@@ -400,31 +408,49 @@ ${rows.join('\n')}
     )
   }
 
+  const steps = []
+  const stepsRender = []
+  if (privateKey) {
+    const id = 'username'
+    steps.push(id)
+    stepsRender.push(
+      <Flipped key={id} flipId={id}>
+        {renderValidateDomain}
+      </Flipped>
+    )
+  }
+  // if (!privateKey) {
+  const id = 'generateKeys'
+  steps.push(id)
+  stepsRender.push(
+    <Flipped key={id} flipId={id}>
+      {renderGenerateKeys}
+    </Flipped>
+  )
+  // }
+  console.log(steps)
+
   return (
     <>
       <h1>
-        Submit your first social post to DID (Decentralized Information
-        Distributor)
+        Submit your first social post to DID
+        {/* (Decentralized Information Distributor) */}
       </h1>
-      {renderGenerateKeys()}
-      {renderDowloadKeys()}
-      {renderValidateDomain()}
-      {renderDownloadPost()}
-      {renderValidatePost()}
-      {renderSumbitPost()}
+      <Flipper flipKey={steps.join('')}>
+        {/* {renderSumbitPost()}
+        {renderValidatePost()}
+        {renderDownloadPost()}
+        {renderValidateDomain()}
+        {renderGenerateKeys()} */}
+        {stepsRender}
+      </Flipper>
       {/*
       <div class="step hidden" id="step6">
         <h2>Step 6: See your post appear on a social reader platform</h2>
         <a href="#">Open link</a>
       </div>
-      <button
-        onClick={() => {
-          window.localStorage.clear()
-          setStep(0)
-        }}
-      >
-        Reset {step}
-      </button> */}
+  */}
+      <button onClick={reset}>Reset progress</button>
     </>
   )
 }
