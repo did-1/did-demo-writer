@@ -9,8 +9,9 @@
   border: 1px solid turquoise;
   border-radius: 1rem;
   margin-bottom: 2rem;
-  /* transition: margin-left 1.5s ease-in-out;
-  animation: fadeIn 1.5s ease; */
+  width: 900px;
+  transition: margin-left 1.5s ease-in-out;
+  animation: fadeIn 1.5s ease;
 }
 
 .stepsContainer {
@@ -18,7 +19,7 @@
   flex-direction: column;
 }
 
-/* @keyframes fadeIn {
+@keyframes fadeIn {
   0% {
     opacity: 0;
     margin-left: -50px;
@@ -27,4 +28,4 @@
     opacity: 1;
     margin-left: 0;
   }
-} */
+}

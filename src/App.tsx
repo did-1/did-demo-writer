@@ -415,7 +415,7 @@ ${rows.join('\n')}
     steps.push(id)
     stepsRender.push(
       <Flipped key={id} flipId={id}>
-        {renderValidateDomain}
+        <div>{renderValidateDomain()}</div>
       </Flipped>
     )
   }
@@ -424,7 +424,7 @@ ${rows.join('\n')}
   steps.push(id)
   stepsRender.push(
     <Flipped key={id} flipId={id}>
-      {renderGenerateKeys}
+      <div>{renderGenerateKeys()}</div>
     </Flipped>
   )
   // }
