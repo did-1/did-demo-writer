@@ -11,6 +11,7 @@ import { Flipper, Flipped } from 'react-flip-toolkit'
 const STORAGE_KEYS = {
   privateKey: 'privateKey',
   publicKey: 'publicKey',
+  publicKeyDownloaded: 'publicKeyDownloaded',
   username: 'personalDomain',
   content: 'content',
   downloadedContent: 'downloadedContent',
@@ -88,6 +89,9 @@ function App() {
   const [publicKey, setPublicKey] = useState(
     localStorage.getItem(STORAGE_KEYS.publicKey) || ''
   )
+  const [publicKeyDownloaded, setPublicKeyDownloaded] = useState(
+    localStorage.getItem(STORAGE_KEYS.publicKeyDownloaded) || ''
+  )
   const [username, setUsername] = useState(
     localStorage.getItem(STORAGE_KEYS.username) || ''
   )
@@ -113,6 +117,7 @@ function App() {
     setDownloadedContent('')
     setSubmitError('')
     setSubmitLoading(false)
+    setPublicKeyDownloaded('')
   }
 
   const generateKeys = () => {
@@ -169,6 +174,8 @@ function App() {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+    localStorage.setItem(STORAGE_KEYS.publicKeyDownloaded, 'true')
+    setPublicKeyDownloaded('true')
   }
 
   const submitPost = async () => {
@@ -212,22 +219,27 @@ function App() {
     // console.log(signature.toDER())
   }
 
+  const renderDownloadKeys = () => {
+    return (
+      <div className="step">
+        <h3>
+          {publicKeyDownloaded ? '✅ ' : ''} Step 2: Download public and private
+          keys
+        </h3>
+        <button onClick={downloadPrivateKey}>Download private key</button>
+        <button onClick={downloadPublicKey}>Download public key</button>
+      </div>
+    )
+  }
+
   const renderGenerateKeys = () => {
     let buttons = <button onClick={generateKeys}>Generate keys</button>
-    if (privateKey) {
-      buttons = (
-        <>
-          <button onClick={downloadPrivateKey}>Download private key</button>
-          <button onClick={downloadPublicKey}>Download public key</button>
-        </>
-      )
-    }
     return (
       <div className="step">
         <h3>
           {privateKey ? '✅ ' : ''} Step 1: Generate private and public keys:
         </h3>
-        {buttons}
+        {privateKey ? null : buttons}
       </div>
     )
   }
@@ -265,26 +277,30 @@ function App() {
       <div className="step">
         <h3>
           {username ? '✅ ' : null}
-          Step 2: Prove domain ownership by uploading public key to a domain
-          that you own
+          Step 3: Upload public key to a website that you own
         </h3>
-        http://
-        <input
-          ref={domainInput}
-          disabled={!!username}
-          placeholder="example.com"
-          defaultValue={username}
-        />
-        /did.pem
-        {username ? null : (
-          <button
-            onClick={() => {
-              validateDomain((domainInput.current! as any).value)
-            }}
-          >
-            Validate
-          </button>
-        )}
+        <p>
+          By doing this you will prove that you are the owner of your domain
+        </p>
+        <div>
+          http://
+          <input
+            ref={domainInput}
+            disabled={!!username}
+            placeholder="example.com"
+            defaultValue={username}
+          />
+          /did.pem
+          {username ? null : (
+            <button
+              onClick={() => {
+                validateDomain((domainInput.current! as any).value)
+              }}
+            >
+              Validate
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -409,26 +425,22 @@ ${rows.join('\n')}
   }
 
   const steps = []
-  const stepsRender = []
-  if (privateKey) {
-    const id = 'username'
-    steps.push(id)
-    stepsRender.push(
-      <Flipped key={id} flipId={id}>
-        <div>{renderValidateDomain()}</div>
-      </Flipped>
-    )
+  if (publicKeyDownloaded) {
+    steps.push({
+      id: 'username',
+      element: renderValidateDomain
+    })
   }
-  // if (!privateKey) {
-  const id = 'generateKeys'
-  steps.push(id)
-  stepsRender.push(
-    <Flipped key={id} flipId={id}>
-      <div>{renderGenerateKeys()}</div>
-    </Flipped>
-  )
-  // }
-  console.log(steps)
+  if (privateKey) {
+    steps.push({
+      id: 'download',
+      element: renderDownloadKeys
+    })
+  }
+  steps.push({
+    id: 'generate',
+    element: renderGenerateKeys
+  })
 
   return (
     <>
@@ -442,7 +454,11 @@ ${rows.join('\n')}
         {renderDownloadPost()}
         {renderValidateDomain()}
         {renderGenerateKeys()} */}
-        {stepsRender}
+        {steps.map((step) => (
+          <Flipped key={step.id} flipId={step.id}>
+            <div>{step.element()}</div>
+          </Flipped>
+        ))}
       </Flipper>
       {/*
       <div class="step hidden" id="step6">

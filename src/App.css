@@ -12,6 +12,7 @@
   width: 900px;
   transition: margin-left 1.5s ease-in-out;
   animation: fadeIn 1.5s ease;
+  flex-direction: column;
 }
 
 .stepsContainer {
