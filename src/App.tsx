@@ -16,7 +16,9 @@ const STORAGE_KEYS = {
   content: 'content',
   downloadedContent: 'downloadedContent',
   postData: 'postData',
-  path: 'path'
+  path: 'path',
+  started: 'started',
+  submitted: 'submitted'
 }
 
 const API_URL = 'http://localhost:3000'
@@ -74,7 +76,7 @@ function escapeHTML(str: string) {
 function createSlug(str: string) {
   return str
     .split('\n')[0]
-    .substring(0, 64)
+    .substring(0, 32)
     .toLowerCase() // convert to lowercase
     .replace(/\s+/g, '-') // replace spaces with hyphens
     .replace(/[^a-z0-9-]/g, '') // remove invalid chars
@@ -83,6 +85,7 @@ function createSlug(str: string) {
 
 function App() {
   const domainInput = useRef(null)
+  const pathInput = useRef(null)
   const [privateKey, setPrivateKey] = useState(
     localStorage.getItem(STORAGE_KEYS.privateKey) || ''
   )
@@ -97,6 +100,12 @@ function App() {
   )
   const [content, setContent] = useState(
     localStorage.getItem(STORAGE_KEYS.content) || ''
+  )
+  const [started, setStarted] = useState(
+    localStorage.getItem(STORAGE_KEYS.started) || ''
+  )
+  const [submitted, setSubmitted] = useState(
+    localStorage.getItem(STORAGE_KEYS.submitted) || ''
   )
   const [path, setPath] = useState(
     localStorage.getItem(STORAGE_KEYS.path) || ''
@@ -118,6 +127,21 @@ function App() {
     setSubmitError('')
     setSubmitLoading(false)
     setPublicKeyDownloaded('')
+    setStarted('')
+    setSubmitted('')
+  }
+
+  const addNewPost = () => {
+    setContent('')
+    localStorage.removeItem(STORAGE_KEYS.content)
+    setPath('')
+    localStorage.removeItem(STORAGE_KEYS.path)
+    setDownloadedContent('')
+    localStorage.removeItem(STORAGE_KEYS.downloadedContent)
+    setSubmitError('')
+    setSubmitLoading(false)
+    setSubmitted('')
+    localStorage.removeItem(STORAGE_KEYS.submitted)
   }
 
   const generateKeys = () => {
@@ -202,7 +226,7 @@ function App() {
       jsSha.sha256([blockHash, username, path, hash].join('/'))
     )
     console.log(message)
-    const resp = await Api().submitPost('tautvilas.lt', {
+    const resp = await Api().submitPost(username, {
       domain: username,
       path,
       blockHash,
@@ -211,6 +235,10 @@ function App() {
     })
     if (resp.error) {
       setSubmitError(resp.error)
+    } else if (resp.success) {
+      setSubmitError('')
+      setSubmitted('true')
+      localStorage.setItem(STORAGE_KEYS.submitted, 'true')
     }
     setSubmitLoading(false)
     console.log(resp)
@@ -221,7 +249,7 @@ function App() {
 
   const renderDownloadKeys = () => {
     return (
-      <div className="step">
+      <div>
         <h3>
           {publicKeyDownloaded ? '✅ ' : ''} Step 2: Download public and private
           keys
@@ -235,7 +263,7 @@ function App() {
   const renderGenerateKeys = () => {
     let buttons = <button onClick={generateKeys}>Generate keys</button>
     return (
-      <div className="step">
+      <div>
         <h3>
           {privateKey ? '✅ ' : ''} Step 1: Generate private and public keys:
         </h3>
@@ -244,37 +272,57 @@ function App() {
     )
   }
 
-  const validatePath = async () => {
-    if (!path || !username) {
+  const validatePath = async (pathString: string) => {
+    setSubmitLoading(true)
+    if (!pathString) {
+      setSubmitError('Please specify post path')
+      setSubmitLoading(false)
       return
     }
-    const response = await Api().validatePath(username, path)
+    const response = await Api().validatePath(username, pathString)
     if (response?.valid) {
       //TODO: display error message
-      localStorage.setItem(STORAGE_KEYS.path, path)
+      localStorage.setItem(STORAGE_KEYS.path, pathString)
+      setPath(pathString)
+      setSubmitError('')
+    } else {
+      setSubmitError(
+        response.message ||
+          'Post not found at path ' + ['http:/', username, pathString].join('/')
+      )
     }
     // TODO: set state loading: false to update state
     console.log(response)
+    setSubmitLoading(false)
   }
 
   const validateDomain = async (domainName: string) => {
-    // TODO: display loading state
+    domainName = domainName.trim()
+    setSubmitLoading(true)
+    if (!domainName) {
+      setSubmitError('Please specify domain name, for example mydomain.com')
+      setSubmitLoading(false)
+      return
+    }
     const response = await Api().validateKey(domainName, getPublicKeyPem())
     if (response?.valid) {
-      //TODO: display error message
       localStorage.setItem(STORAGE_KEYS.username, domainName)
       setUsername(domainName)
+      setSubmitError('')
+    } else {
+      setSubmitError(
+        response?.message ||
+          'Public key was not found at URL http://' + domainName + '/did.pem'
+      )
     }
     // TODO: set state loading: false to update state
     console.log(response)
+    setSubmitLoading(false)
   }
 
   const renderValidateDomain = () => {
-    if (!privateKey) {
-      return null
-    }
     return (
-      <div className="step">
+      <div>
         <h3>
           {username ? '✅ ' : null}
           Step 3: Upload public key to a website that you own
@@ -293,12 +341,16 @@ function App() {
           /did.pem
           {username ? null : (
             <button
+              disabled={submitLoading}
               onClick={() => {
                 validateDomain((domainInput.current! as any).value)
               }}
             >
-              Validate
+              {submitLoading ? 'Validating...' : 'Validate'}
             </button>
+          )}
+          {username && submitError ? null : (
+            <p className="errorMessage">{submitError}</p>
           )}
         </div>
       </div>
@@ -350,58 +402,85 @@ ${rows.join('\n')}
   }
 
   const renderValidatePost = () => {
-    const storedPath = localStorage.getItem(STORAGE_KEYS.path)
-    if (!downloadedContent) {
-      return null
-    }
     const suggestedSlug = createSlug(downloadedContent)
     return (
-      <div className="step">
+      <div>
         <h3>
-          {storedPath ? '✅ ' : null} Step 4: Upload your social post to your
+          {path ? '✅ ' : null} Step 5: Upload your social post to your
           validated domain
         </h3>
         <p>
-          Create a folder on your folder and upload downloaded index.html to it.
+          Create a folder on your domain and upload downloaded index.html to it.
           A good name for such folder could be <i>{suggestedSlug}</i>
         </p>
         http://{username}/
         <input
           id="url"
-          disabled={storedPath ? true : false}
+          ref={pathInput}
+          disabled={path ? true : false}
           placeholder={suggestedSlug}
-          defaultValue={storedPath || ''}
-          onChange={(e) => setPath(e.target.value.trim())}
+          defaultValue={path || ''}
         />
-        {storedPath ? null : <button onClick={validatePath}>Check URL</button>}
+        {path ? null : (
+          <button
+            disabled={submitLoading}
+            onClick={() => validatePath((pathInput.current! as any).value)}
+          >
+            {submitLoading ? 'Checking...' : 'Check URL'}
+          </button>
+        )}
+        {submitError && !path ? (
+          <p className="errorMessage">{submitError}</p>
+        ) : null}
       </div>
     )
   }
 
   const renderSumbitPost = () => {
-    if (!localStorage.getItem(STORAGE_KEYS.path)) {
-      return null
-    }
     return (
-      <div className="step">
-        <h3>Step 5: Submit your signed post to DID node</h3>
-        Node: {API_URL}
-        <br />
-        <button onClick={submitPost}>Submit</button>
-        {submitLoading ? 'Loading...' : ''}
-        {submitError}
+      <div>
+        <h3>
+          {submitted ? '✅ ' : null} Step 6: Submit your signed post to DID node
+        </h3>
+        <p>
+          Your submission will be signed automatically using your private key
+        </p>
+        {/* Node: {API_URL}
+        <br /> */}
+        {!submitted ? (
+          <button onClick={submitPost} disabled={submitLoading}>
+            {submitLoading ? 'Submitting...' : 'Submit'}
+          </button>
+        ) : null}
+        {submitError && !submitted ? (
+          <p className="errorMessage">{submitError}</p>
+        ) : (
+          ''
+        )}
+      </div>
+    )
+  }
+
+  const renderCongrats = () => {
+    return (
+      <div>
+        <h3>Congrats! You have submitted a post to DID</h3>
+        <p>
+          Now you can <a href="http://tautvilas.lt">view your post</a> on a
+          public reader platform.
+        </p>
+        <p>What do you want to do next?</p>
+        <button onClick={addNewPost}>Add another post</button>
+        <button>Share post published by another domain</button>
       </div>
     )
   }
 
   const renderDownloadPost = () => {
-    if (!localStorage.getItem(STORAGE_KEYS.username)) {
-      return null
-    }
     return (
-      <div className="step">
+      <div>
         <h3>
-          {downloadedContent ? '✅ ' : null}Step 3: Write your post and download
+          {downloadedContent ? '✅ ' : null}Step 4: Write your post and download
           generated html file
         </h3>
         <label htmlFor="post">Your post:</label>
@@ -419,12 +498,63 @@ ${rows.join('\n')}
           <button onClick={downloadSocialPost}>
             Download social post file
           </button>
-        ) : null}
+        ) : (
+          'Post content too short, please write something more :)'
+        )}
+      </div>
+    )
+  }
+
+  const renderStart = () => {
+    return (
+      <div>
+        <h3>What is DID?</h3>
+        <p>
+          DID is <i>Decentralized Information Distribution</i> network, it
+          aggregates social media post urls in a decentralized database. Each
+          social post is stored on post owner domain and is published to DID
+          network by signing it with private owner key. Are you ready to write
+          your first post?
+        </p>
+        {started ? null : (
+          <button
+            onClick={() => {
+              setStarted('true')
+              localStorage.setItem(STORAGE_KEYS.started, 'true')
+            }}
+          >
+            Let's get started!
+          </button>
+        )}
       </div>
     )
   }
 
   const steps = []
+  if (submitted) {
+    steps.push({
+      id: 'congrats',
+      element: renderCongrats
+    })
+  }
+  if (path) {
+    steps.push({
+      id: 'submitPost',
+      element: renderSumbitPost
+    })
+  }
+  if (downloadedContent) {
+    steps.push({
+      id: 'validatePost',
+      element: renderValidatePost
+    })
+  }
+  if (username) {
+    steps.push({
+      id: 'post',
+      element: renderDownloadPost
+    })
+  }
   if (publicKeyDownloaded) {
     steps.push({
       id: 'username',
@@ -437,35 +567,29 @@ ${rows.join('\n')}
       element: renderDownloadKeys
     })
   }
+  if (started) {
+    steps.push({
+      id: 'generate',
+      element: renderGenerateKeys
+    })
+  }
+  // if (!started) {
   steps.push({
-    id: 'generate',
-    element: renderGenerateKeys
+    id: 'start',
+    element: renderStart
   })
+  // }
 
   return (
     <>
-      <h1>
-        Submit your first social post to DID
-        {/* (Decentralized Information Distributor) */}
-      </h1>
+      <h1>Submit your first social post to DID</h1>
       <Flipper flipKey={steps.join('')}>
-        {/* {renderSumbitPost()}
-        {renderValidatePost()}
-        {renderDownloadPost()}
-        {renderValidateDomain()}
-        {renderGenerateKeys()} */}
         {steps.map((step) => (
           <Flipped key={step.id} flipId={step.id}>
-            <div>{step.element()}</div>
+            <div className="step">{step.element()}</div>
           </Flipped>
         ))}
       </Flipper>
-      {/*
-      <div class="step hidden" id="step6">
-        <h2>Step 6: See your post appear on a social reader platform</h2>
-        <a href="#">Open link</a>
-      </div>
-  */}
       <button onClick={reset}>Reset progress</button>
     </>
   )
