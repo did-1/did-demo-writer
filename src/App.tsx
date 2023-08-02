@@ -179,7 +179,7 @@ function App() {
 
   const getPublicKeyPem = () => {
     window.Buffer = buffer.Buffer
-    const rawPublicKey = localStorage.getItem(STORAGE_KEYS.publicKey)
+    const rawPublicKey = publicKey
     if (rawPublicKey) {
       const keyEncoder = new KeyEncoder('secp256k1')
       const pemPublicKey = keyEncoder.encodePublic(rawPublicKey, 'raw', 'pem')
