@@ -365,6 +365,7 @@ function App() {
     const rows = escapedContent.map((c) => {
       return `    <meta name="did:content" content="${c}">`
     })
+    rows.push(`    <meta name="did:timestamp" content="${+new Date()}">`)
     // TODO attach image
     // <meta name="did:media" content="${url}">`
     // <meta name="did:media:hash" content="${imageHash}">`
