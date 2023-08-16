@@ -18,7 +18,8 @@ const STORAGE_KEYS = {
   postData: 'postData',
   path: 'path',
   started: 'started',
-  submitted: 'submitted'
+  submitted: 'submitted',
+  done: 'done'
 }
 
 const API_URL = 'http://localhost:3000'
@@ -86,6 +87,7 @@ function createSlug(str: string) {
 function App() {
   const domainInput = useRef(null)
   const pathInput = useRef(null)
+  const pathInput2 = useRef(null)
   const [privateKey, setPrivateKey] = useState(
     localStorage.getItem(STORAGE_KEYS.privateKey) || ''
   )
@@ -106,6 +108,9 @@ function App() {
   )
   const [submitted, setSubmitted] = useState(
     localStorage.getItem(STORAGE_KEYS.submitted) || ''
+  )
+  const [done, setDone] = useState(
+    localStorage.getItem(STORAGE_KEYS.done) || ''
   )
   const [path, setPath] = useState(
     localStorage.getItem(STORAGE_KEYS.path) || ''
@@ -129,19 +134,25 @@ function App() {
     setPublicKeyDownloaded('')
     setStarted('')
     setSubmitted('')
+    setDone('')
   }
 
-  const addNewPost = () => {
-    setContent('')
-    localStorage.removeItem(STORAGE_KEYS.content)
-    setPath('')
-    localStorage.removeItem(STORAGE_KEYS.path)
-    setDownloadedContent('')
-    localStorage.removeItem(STORAGE_KEYS.downloadedContent)
-    setSubmitError('')
-    setSubmitLoading(false)
-    setSubmitted('')
-    localStorage.removeItem(STORAGE_KEYS.submitted)
+  // const addNewPost = () => {
+  //   setContent('')
+  //   localStorage.removeItem(STORAGE_KEYS.content)
+  //   setPath('')
+  //   localStorage.removeItem(STORAGE_KEYS.path)
+  //   setDownloadedContent('')
+  //   localStorage.removeItem(STORAGE_KEYS.downloadedContent)
+  //   setSubmitError('')
+  //   setSubmitLoading(false)
+  //   setSubmitted('')
+  //   localStorage.removeItem(STORAGE_KEYS.submitted)
+  // }
+
+  const displayWriter = () => {
+    window.localStorage.setItem(STORAGE_KEYS.done, 'true')
+    setDone('true')
   }
 
   const generateKeys = () => {
@@ -202,11 +213,15 @@ function App() {
     setPublicKeyDownloaded('true')
   }
 
-  const submitPost = async () => {
+  const submitPost = async (fullPath: string) => {
     setSubmitError('')
     setSubmitLoading(true)
-    const data = localStorage.getItem(STORAGE_KEYS.postData)
-    if (!data) {
+    const postOwner = fullPath.split('/')[0]
+    const postPath = fullPath.split('/').slice(1).join('/')
+
+    // TODO: fetch data using backend
+    const data = (await validatePath(postOwner, postPath))?.content
+    if (!data && !submitError) {
       setSubmitError('Post not valid')
       setSubmitLoading(false)
       return
@@ -221,14 +236,12 @@ function App() {
     const block = await Api().getLastBlock()
     console.log(block.hash)
     const blockHash = block.hash
-    const message = [blockHash, username, path, hash].join('/')
     const signature = key.sign(
-      jsSha.sha256([blockHash, username, path, hash].join('/'))
+      jsSha.sha256([blockHash, postOwner, postPath, hash].join('/'))
     )
-    console.log(message)
     const resp = await Api().submitPost(username, {
-      domain: username,
-      path,
+      domain: postOwner,
+      path: postPath,
       blockHash,
       hash,
       signature: signature.toDER()
@@ -265,35 +278,35 @@ function App() {
     return (
       <div>
         <h3>
-          {privateKey ? '✅ ' : ''} Step 1: Generate private and public keys:
+          {privateKey ? '✅ ' : ''} Step 1: Generate private and public keys
         </h3>
         {privateKey ? null : buttons}
       </div>
     )
   }
 
-  const validatePath = async (pathString: string) => {
+  const validatePath = async (domain: string, pathString: string) => {
     setSubmitLoading(true)
     if (!pathString) {
       setSubmitError('Please specify post path')
       setSubmitLoading(false)
       return
     }
-    const response = await Api().validatePath(username, pathString)
+    const response = await Api().validatePath(domain, pathString)
     if (response?.valid) {
       //TODO: display error message
-      localStorage.setItem(STORAGE_KEYS.path, pathString)
-      setPath(pathString)
       setSubmitError('')
     } else {
       setSubmitError(
         response.message ||
-          'Post not found at path ' + ['http:/', username, pathString].join('/')
+          'Post not found at path ' + ['http:/', domain, pathString].join('/')
       )
     }
     // TODO: set state loading: false to update state
     console.log(response)
     setSubmitLoading(false)
+    console.log(response)
+    return response
   }
 
   const validateDomain = async (domainName: string) => {
@@ -403,7 +416,7 @@ ${rows.join('\n')}
   }
 
   const renderValidatePost = () => {
-    const suggestedSlug = createSlug(downloadedContent)
+    const suggestedSlug = 'first-post'
     return (
       <div>
         <h3>
@@ -414,18 +427,31 @@ ${rows.join('\n')}
           Create a folder on your domain and upload downloaded index.html to it.
           A good name for such folder could be <i>{suggestedSlug}</i>
         </p>
+        {path ? null : (
+          <p>
+            If you want to change post content, you can still do it. Just change
+            text and download the post again in the previous step. Make sure you
+            upload correct post to your domain.
+          </p>
+        )}
         http://{username}/
         <input
           id="url"
           ref={pathInput}
           disabled={path ? true : false}
-          placeholder={suggestedSlug}
-          defaultValue={path || ''}
+          defaultValue={path || suggestedSlug}
         />
         {path ? null : (
           <button
             disabled={submitLoading}
-            onClick={() => validatePath((pathInput.current! as any).value)}
+            onClick={async () => {
+              const pathString = (pathInput.current! as any).value
+              const resp = await validatePath(username, pathString)
+              if (resp?.valid) {
+                localStorage.setItem(STORAGE_KEYS.path, pathString)
+                setPath(pathString)
+              }
+            }}
           >
             {submitLoading ? 'Checking...' : 'Check URL'}
           </button>
@@ -449,7 +475,7 @@ ${rows.join('\n')}
         {/* Node: {API_URL}
         <br /> */}
         {!submitted ? (
-          <button onClick={submitPost} disabled={submitLoading}>
+          <button onClick={() => submitPost(path)} disabled={submitLoading}>
             {submitLoading ? 'Submitting...' : 'Submit'}
           </button>
         ) : null}
@@ -465,14 +491,57 @@ ${rows.join('\n')}
   const renderCongrats = () => {
     return (
       <div>
-        <h3>Congrats! You have submitted a post to DID</h3>
+        <h3>
+          {downloadedContent ? '✅ ' : null}Congrats! You have submitted a post
+          to DID
+        </h3>
         <p>
-          Now you can <a href="http://tautvilas.lt">view your post</a> on a
-          public reader platform.
+          Now you can{' '}
+          <a href="http://tautvilas.lt" target="_blank">
+            view your post
+          </a>{' '}
+          on a public reader platform.
         </p>
-        <p>What do you want to do next?</p>
-        <button onClick={addNewPost}>Add another post</button>
-        <button>Share post published by another domain</button>
+        <p>
+          You can not only post your content, but also share DID links generated
+          by other people. For this you can use unified writer interface
+        </p>
+        {done ? null : <button onClick={displayWriter}>Let's go!</button>}
+      </div>
+    )
+  }
+
+  const renderWriter = () => {
+    return (
+      <div>
+        <h3>Write and publish your post or link on other domain</h3>
+        <label htmlFor="post">Your post:</label>
+        <br />
+        <textarea
+          style={{ minWidth: 400 }}
+          onChange={(e) => {
+            setContent(e.target.value.trim())
+            localStorage.setItem(STORAGE_KEYS.content, e.target.value.trim())
+          }}
+        ></textarea>
+        <br />
+        {content.length > 10 ? (
+          <button onClick={downloadSocialPost}>
+            Download social post file
+          </button>
+        ) : (
+          'Post content too short, please write something more :)'
+        )}
+        <br />
+        http://
+        <input ref={pathInput2} placeholder="Enter post URL" />
+        <button
+          disabled={submitLoading}
+          onClick={() => submitPost((pathInput2.current! as any).value)}
+        >
+          {submitLoading ? 'Submitting...' : 'Submit'}
+        </button>
+        {submitError ? <p className="errorMessage">{submitError}</p> : null}
       </div>
     )
   }
@@ -489,6 +558,7 @@ ${rows.join('\n')}
         <textarea
           id="post"
           defaultValue={content}
+          style={{ minWidth: 400 }}
           onChange={(e) => {
             setContent(e.target.value.trim())
             localStorage.setItem(STORAGE_KEYS.content, e.target.value.trim())
@@ -532,6 +602,12 @@ ${rows.join('\n')}
   }
 
   const steps = []
+  if (done) {
+    steps.push({
+      id: 'writer',
+      element: renderWriter
+    })
+  }
   if (submitted) {
     steps.push({
       id: 'congrats',
