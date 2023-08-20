@@ -487,7 +487,7 @@ ${rows.join('\n')}
         </h3>
         <p>
           Now you can{' '}
-          <a href="http://tautvilas.lt" target="_blank">
+          <a href="https://reader.did-1.com" target="_blank">
             view your post
           </a>{' '}
           on a public reader platform.
