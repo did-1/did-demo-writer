@@ -22,7 +22,7 @@ const STORAGE_KEYS = {
   done: 'done'
 }
 
-const API_URL = 'http://instance.did-1.com'
+const API_URL = 'https://instance.did-1.com'
 
 const Api = () => {
   const makeRequest = async (
