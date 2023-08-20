@@ -74,16 +74,6 @@ function escapeHTML(str: string) {
   return content.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function createSlug(str: string) {
-  return str
-    .split('\n')[0]
-    .substring(0, 32)
-    .toLowerCase() // convert to lowercase
-    .replace(/\s+/g, '-') // replace spaces with hyphens
-    .replace(/[^a-z0-9-]/g, '') // remove invalid chars
-    .replace(/--+/g, '-') // remove duplicate hyphens
-}
-
 function App() {
   const domainInput = useRef(null)
   const pathInput = useRef(null)
@@ -542,6 +532,7 @@ ${rows.join('\n')}
           {submitLoading ? 'Submitting...' : 'Submit'}
         </button>
         {submitError ? <p className="errorMessage">{submitError}</p> : null}
+        View your submitted posts on Reader platform
       </div>
     )
   }
