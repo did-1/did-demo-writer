@@ -572,11 +572,11 @@ ${rows.join('\n')}
       <div>
         <h3>What is DID?</h3>
         <p>
-          DID is <i>Decentralized Information Distribution</i> network, it
-          aggregates social media post urls in a decentralized database. Each
-          social post is stored on post owner domain and is published to DID
-          network by signing it with private owner key. Are you ready to write
-          your first post?
+          DID is a <i>Decentralized Information Distribution</i> network, it
+          aggregates URLs of social media posts in a decentralized database.
+          Each social post is stored on the owner's domain and is published to
+          the DID network by signing it with the owner's private key. Are you
+          ready to write your first post?
         </p>
         {started ? null : (
           <button
