@@ -449,7 +449,10 @@ ${rows.join('\n')}
         {/* Node: {API_URL}
         <br /> */}
         {!submitted ? (
-          <button onClick={() => submitPost(path)} disabled={submitLoading}>
+          <button
+            onClick={() => submitPost([username, path].join('/'))}
+            disabled={submitLoading}
+          >
             {submitLoading ? 'Submitting...' : 'Submit'}
           </button>
         ) : null}
