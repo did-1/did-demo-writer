@@ -111,22 +111,6 @@ function App() {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  const reset = () => {
-    window.localStorage.clear()
-    setPrivateKey('')
-    setPublicKey('')
-    setUsername('')
-    setContent('')
-    setPath('')
-    setDownloadedContent('')
-    setSubmitError('')
-    setSubmitLoading(false)
-    setPublicKeyDownloaded('')
-    setStarted('')
-    setSubmitted('')
-    setDone('')
-  }
-
   // const addNewPost = () => {
   //   setContent('')
   //   localStorage.removeItem(STORAGE_KEYS.content)
@@ -658,7 +642,6 @@ ${rows.join('\n')}
           </Flipped>
         ))}
       </Flipper>
-      <button onClick={reset}>Reset progress</button>
     </>
   )
 }
