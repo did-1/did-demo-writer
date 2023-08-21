@@ -200,6 +200,7 @@ function App() {
       setSubmitLoading(false)
       return
     }
+    setSubmitLoading(true)
     const hash = jsSha.sha256(data)
     const EC = elliptic.ec
     const ec = new EC('secp256k1')
@@ -519,7 +520,6 @@ ${rows.join('\n')}
           {submitLoading ? 'Submitting...' : 'Submit'}
         </button>
         {submitError ? <p className="errorMessage">{submitError}</p> : null}
-        View your submitted posts on Reader platform
       </div>
     )
   }
