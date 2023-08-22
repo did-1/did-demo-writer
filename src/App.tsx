@@ -110,6 +110,7 @@ function App() {
   )
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [submitSuccess, setSubmitSucess] = useState('')
 
   // const addNewPost = () => {
   //   setContent('')
@@ -193,6 +194,7 @@ function App() {
       fullPath = fullPath.slice(0, -1)
     }
     setSubmitError('')
+    setSubmitSucess('')
     setSubmitLoading(true)
     const postOwner = fullPath.split('/')[0]
     const postPath = fullPath.split('/').slice(1).join('/')
@@ -230,6 +232,7 @@ function App() {
     } else if (resp.success) {
       setSubmitError('')
       setSubmitted('true')
+      setSubmitSucess('Success!')
       localStorage.setItem(STORAGE_KEYS.submitted, 'true')
     }
     setSubmitLoading(false)
@@ -541,6 +544,14 @@ ${rows.join('\n')}
             {submitLoading ? 'Submitting...' : 'Submit'}
           </button>
           {submitError ? <p className="errorMessage">{submitError}</p> : null}
+          {submitSuccess ? (
+            <p className="successMessage">
+              {submitSuccess}{' '}
+              <a href="https://reader.did-1.com" target="_blank">
+                View your post
+              </a>
+            </p>
+          ) : null}
         </div>
       </div>
     )
