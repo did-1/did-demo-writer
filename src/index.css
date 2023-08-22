@@ -5,18 +5,20 @@
 
   color-scheme: light dark;
   color: #213547;
-  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #1da1f2;
   text-decoration: inherit;
 }
 a:hover {
@@ -31,8 +33,16 @@ body {
 }
 
 h1 {
-  font-size: 3.2em;
+  font-size: 2.2em;
   line-height: 1.1;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+input {
+  padding: 5px;
 }
 
 button {
@@ -45,11 +55,52 @@ button {
   background-color: #f9f9f9;
   cursor: pointer;
   transition: border-color 0.25s;
+  border: 1px solid #e1e8ed;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: #aaa;
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+body {
+  background-color: #f6f8fa;
+  padding: 30px;
+}
+
+.step {
+  display: flex;
+  padding: 2rem;
+  background-color: #ffffff;
+  border: 1px solid #e1e8ed;
+  border-radius: 1rem;
+  margin-bottom: 2rem;
+  transition: margin-left 1.5s ease-in-out;
+  animation: fadeIn 1.5s ease;
+  flex-direction: column;
+}
+
+.errorMessage {
+  padding: 0;
+  margin: 0;
+  color: #ff3333;
+  margin-top: 1em;
+}
+
+.stepsContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    margin-left: -50px;
+  }
+  100% {
+    opacity: 1;
+    margin-left: 0;
+  }
 }

@@ -243,7 +243,9 @@ function App() {
           keys
         </h3>
         <button onClick={downloadPrivateKey}>Download private key</button>
-        <button onClick={downloadPublicKey}>Download public key</button>
+        <button style={{ marginLeft: 15 }} onClick={downloadPublicKey}>
+          Download public key
+        </button>
       </div>
     )
   }
@@ -300,7 +302,9 @@ function App() {
     } else {
       setSubmitError(
         response?.message ||
-          'Public key was not found at URL http://' + domainName + '/did.pem'
+          'Valid public key was not found at URL http://' +
+            domainName +
+            '/did.pem'
       )
     }
     // TODO: set state loading: false to update state
@@ -321,25 +325,28 @@ function App() {
         <div>
           http://
           <input
+            style={{ marginLeft: 5, marginRight: 5 }}
             ref={domainInput}
             disabled={!!username}
             placeholder="example.com"
             defaultValue={username}
           />
           /did.pem
-          {username ? null : (
-            <button
-              disabled={submitLoading}
-              onClick={() => {
-                validateDomain((domainInput.current! as any).value)
-              }}
-            >
-              {submitLoading ? 'Validating...' : 'Validate'}
-            </button>
-          )}
-          {username && submitError ? null : (
-            <p className="errorMessage">{submitError}</p>
-          )}
+          <div style={{ marginTop: 15 }}>
+            {username ? null : (
+              <button
+                disabled={submitLoading}
+                onClick={() => {
+                  validateDomain((domainInput.current! as any).value)
+                }}
+              >
+                {submitLoading ? 'Validating...' : 'Validate'}
+              </button>
+            )}
+            {(domainInput?.current! as any)?.value && submitError ? (
+              <p className="errorMessage">{submitError}</p>
+            ) : null}
+          </div>
         </div>
       </div>
     )
