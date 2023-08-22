@@ -242,6 +242,7 @@ function App() {
           {publicKeyDownloaded ? '✅ ' : ''} Step 2: Download public and private
           keys
         </h3>
+        <p>Make sure you store your keys somewhere safe!</p>
         <button onClick={downloadPrivateKey}>Download private key</button>
         <button style={{ marginLeft: 15 }} onClick={downloadPublicKey}>
           Download public key
@@ -343,7 +344,9 @@ function App() {
                 {submitLoading ? 'Validating...' : 'Validate'}
               </button>
             )}
-            {(domainInput?.current! as any)?.value && submitError ? (
+            {(domainInput?.current! as any)?.value &&
+            submitError &&
+            !username ? (
               <p className="errorMessage">{submitError}</p>
             ) : null}
           </div>
@@ -406,25 +409,30 @@ ${rows.join('\n')}
           validated domain
         </h3>
         <p>
-          Create a folder on your domain and upload downloaded index.html to it.
-          A good name for such folder could be <i>{suggestedSlug}</i>
+          Create a folder on your domain. Once you've done that, upload the
+          <b> index.html</b> file you downloaded earlier to this folder. A
+          suitable name for this folder might be <b>first-post</b>.
         </p>
         {path ? null : (
           <p>
-            If you want to change post content, you can still do it. Just change
-            text and download the post again in the previous step. Make sure you
-            upload correct post to your domain.
+            If you wish to modify the post content, you can. Just edit the text
+            in <b>Step 4</b> and then download the updated file. Ensure you
+            upload the correct version of the file to your domain.
           </p>
         )}
-        http://{username}/
-        <input
-          id="url"
-          ref={pathInput}
-          disabled={path ? true : false}
-          defaultValue={path || suggestedSlug}
-        />
+        <div>
+          http://{username}/
+          <input
+            id="url"
+            style={{ marginLeft: 5 }}
+            ref={pathInput}
+            disabled={path ? true : false}
+            defaultValue={path || suggestedSlug}
+          />
+        </div>
         {path ? null : (
           <button
+            style={{ marginTop: 15 }}
             disabled={submitLoading}
             onClick={async () => {
               const pathString = (pathInput.current! as any).value
@@ -485,13 +493,13 @@ ${rows.join('\n')}
           <a href="https://reader.did-1.com" target="_blank">
             view your post
           </a>{' '}
-          on a public reader platform.
+          on a public reader platform!
         </p>
         <p>
-          You can not only post your content, but also share DID links generated
-          by other people. For this you can use unified writer interface
+          You can publish your own content and also share DID links created by
+          others using the integrated writer interface.
         </p>
-        {done ? null : <button onClick={displayWriter}>Let's go!</button>}
+        {done ? null : <button onClick={displayWriter}>Show me how!</button>}
       </div>
     )
   }
@@ -499,34 +507,36 @@ ${rows.join('\n')}
   const renderWriter = () => {
     return (
       <div>
-        <h3>Write and publish your post or link on other domain</h3>
+        <h3>Compose new DID post</h3>
         <label htmlFor="post">Your post:</label>
         <br />
         <textarea
-          style={{ minWidth: 400 }}
+          style={{ minWidth: 300, minHeight: 100 }}
           onChange={(e) => {
             setContent(e.target.value.trim())
             localStorage.setItem(STORAGE_KEYS.content, e.target.value.trim())
           }}
         ></textarea>
         <br />
-        {content.length > 10 ? (
-          <button onClick={downloadSocialPost}>
-            Download social post file
-          </button>
-        ) : (
-          'Post content too short, please write something more :)'
-        )}
-        <br />
-        http://
-        <input ref={pathInput2} placeholder="Enter post URL" />
-        <button
-          disabled={submitLoading}
-          onClick={() => submitPost((pathInput2.current! as any).value)}
-        >
-          {submitLoading ? 'Submitting...' : 'Submit'}
+        <button style={{ marginTop: 15 }} onClick={downloadSocialPost}>
+          Download social post file
         </button>
-        {submitError ? <p className="errorMessage">{submitError}</p> : null}
+        <h3 style={{ marginTop: 15 }}>Publish URL on DID network</h3>
+        http://
+        <input
+          ref={pathInput2}
+          placeholder="Enter post domain and path"
+          style={{ marginLeft: 5, marginRight: 5, minWidth: 300 }}
+        />
+        <div style={{ marginTop: 15 }}>
+          <button
+            disabled={submitLoading}
+            onClick={() => submitPost((pathInput2.current! as any).value)}
+          >
+            {submitLoading ? 'Submitting...' : 'Submit'}
+          </button>
+          {submitError ? <p className="errorMessage">{submitError}</p> : null}
+        </div>
       </div>
     )
   }
@@ -542,21 +552,23 @@ ${rows.join('\n')}
         <br />
         <textarea
           id="post"
+          placeholder="Hey there, this is my first post! I am happy to join the DID network!"
           defaultValue={content}
-          style={{ minWidth: 400 }}
+          style={{ minWidth: 300, minHeight: 100 }}
           onChange={(e) => {
             setContent(e.target.value.trim())
             localStorage.setItem(STORAGE_KEYS.content, e.target.value.trim())
           }}
         ></textarea>
-        <br />
-        {content.length > 10 ? (
-          <button onClick={downloadSocialPost}>
-            Download social post file
-          </button>
-        ) : (
-          'Post content too short, please write something more :)'
-        )}
+        <div style={{ marginTop: 15, color: 'gray' }}>
+          {content.length > 10 ? (
+            <button onClick={downloadSocialPost}>
+              Download social post file
+            </button>
+          ) : (
+            'Post content too short, please write something more and download button will appear :)'
+          )}
+        </div>
       </div>
     )
   }
