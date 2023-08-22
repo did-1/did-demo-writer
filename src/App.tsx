@@ -188,6 +188,10 @@ function App() {
   }
 
   const submitPost = async (fullPath: string) => {
+    fullPath = fullPath.trim()
+    if (fullPath.endsWith('/')) {
+      fullPath = fullPath.slice(0, -1)
+    }
     setSubmitError('')
     setSubmitLoading(true)
     const postOwner = fullPath.split('/')[0]
@@ -195,8 +199,8 @@ function App() {
 
     // TODO: fetch data using backend
     const data = (await validatePath(postOwner, postPath))?.content
-    if (!data && !submitError) {
-      setSubmitError('Post not valid')
+    if (!data) {
+      setSubmitError('Valid post not found at ' + fullPath)
       setSubmitLoading(false)
       return
     }
@@ -279,11 +283,12 @@ function App() {
         response.message ||
           'Post not found at path ' + ['http:/', domain, pathString].join('/')
       )
+      setSubmitLoading(false)
+      return
     }
     // TODO: set state loading: false to update state
     console.log(response)
     setSubmitLoading(false)
-    console.log(response)
     return response
   }
 
@@ -507,7 +512,7 @@ ${rows.join('\n')}
   const renderWriter = () => {
     return (
       <div>
-        <h3>Compose new DID post</h3>
+        <h3>🖊️ Compose new DID post</h3>
         <label htmlFor="post">Your post:</label>
         <br />
         <textarea
@@ -521,7 +526,7 @@ ${rows.join('\n')}
         <button style={{ marginTop: 15 }} onClick={downloadSocialPost}>
           Download social post file
         </button>
-        <h3 style={{ marginTop: 15 }}>Publish URL on DID network</h3>
+        <h3 style={{ marginTop: 15 }}>📤 Publish URL on DID network</h3>
         http://
         <input
           ref={pathInput2}
