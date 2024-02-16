@@ -67,6 +67,9 @@ button:focus-visible {
 
 body {
   background-color: #f6f8fa;
+}
+
+.wrapper {
   padding: 30px;
 }
 
