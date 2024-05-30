@@ -16,6 +16,10 @@
   margin: 0 auto;
 }
 
+button {
+  color: #213547;
+}
+
 a {
   font-weight: 500;
   color: #1da1f2;
@@ -43,6 +47,10 @@ h3 {
 
 input {
   padding: 5px;
+  background-color: white;
+  color: #213547;
+  border: 1px solid #e1e8ed;
+  outline: 0;
 }
 
 button {
