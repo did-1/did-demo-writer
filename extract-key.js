@@ -45,16 +45,18 @@ if (keyType === 'public') {
   )
   console.log(rawPublicKey);
 } else {
-    // Convert PEM to DER
-    const privateKey = crypto.createPrivateKey(pemContents);
-    const derBuffer = privateKey.export({ type: 'sec1', format: 'der' });
-    
-    // Parse the DER structure
-    const parsed = ECPrivateKey.decode(derBuffer, 'der');
-    
-    // Get the private key bytes
-    const rawPrivateKey = parsed.privateKey;
-    
-    console.log('Raw private key (hex):');
-    console.log(rawPrivateKey.toString('hex'));
+  // keyEncoder wraps asn1, but due to several bugs encodePrivate(pemContents, 'pem', 'raw'). fails
+  // that is whey I am implementing direct export using crypto + asn1
+  // Convert PEM to DER
+  const privateKey = crypto.createPrivateKey(pemContents);
+  const derBuffer = privateKey.export({ type: 'sec1', format: 'der' });
+
+  // Parse the DER structure
+  const parsed = ECPrivateKey.decode(derBuffer, 'der');
+
+  // Get the private key bytes
+  const rawPrivateKey = parsed.privateKey;
+
+  console.log('Raw private key (hex):');
+  console.log(rawPrivateKey.toString('hex'));
 }
